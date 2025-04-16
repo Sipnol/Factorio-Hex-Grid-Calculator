@@ -1,8 +1,8 @@
 <script lang="ts">
-	import 'chota/dist/chota.min.css';
-	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+
+	export const prerender = true;
 	class Inputs {
 		#railGridX: number = $state(0);
 		#railGridYStart: number = $state(0);
@@ -84,15 +84,8 @@
 			this.gridOffsetX = gridOffsetX;
 		}
 	}
-
-	let daymode = $state(true);
 	let inputs: Inputs = new Inputs();
 	let solutions: Solution[] = $state([]);
-
-	if (browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-		document.body.classList.add('dark');
-		daymode = false;
-	}
 
 	const updateUrl = () => {
 		goto(page.url.search);
@@ -101,15 +94,6 @@
 	const activate = (index: any) => {
 		solutions[index].active = !solutions[index].active;
 		console.log(index, solutions[index].active);
-	};
-
-	const changeMode = () => {
-		daymode = !daymode;
-		if (daymode) {
-			document.body.classList.remove('dark');
-		} else {
-			document.body.classList.add('dark');
-		}
 	};
 
 	const calculate = () => {
@@ -123,8 +107,8 @@
 			let planSizeX = inputs.railGridX * 2 + railGridY * 2 + (inputs.railOffset * 2 + 2) * 2;
 			let gridOffsetX = (planSizeX - gridSizeX) / 2;
 			let gridOffsetY = (planSizeY - gridSizeY) / 2;
-			gridOffsetX = gridOffsetX - gridOffsetX % 2;
-			gridOffsetY = gridOffsetY - gridOffsetY % 2;
+			gridOffsetX = gridOffsetX - (gridOffsetX % 2);
+			gridOffsetY = gridOffsetY - (gridOffsetY % 2);
 
 			solutions.push(
 				new Solution(
@@ -135,7 +119,7 @@
 					inputs.railGridX,
 					planSizeX,
 					gridSizeX,
-					gridOffsetX,
+					gridOffsetX
 				)
 			);
 		}
@@ -144,27 +128,43 @@
 </script>
 
 <div class="container">
-	<div class="row">
-		<div class="col-11">
-			<h1>Factorio Hexagon Grid Calculator</h1>
-		</div>
-		<div class="col-1">
-			<a
-				href="javascript:"
-				onclick={() => {
-					changeMode();
-				}}>{daymode ? '☀️' : '🌙'}</a
-			>
-		</div>
+	<div>
+		<details>
+			<summary> How To </summary>
+			<ol>
+				<li>create your straight rail lines for either top or bottom.</li>
+				<li>
+					start from one of the edges and go upwards, you want half the y distance including the
+					straight piece.
+				</li>
+				<li>from here add the same distance from your downward rails to the side.</li>
+				<figure>
+					<img src="/example_picture.jpg" height="400px" width="400px" alt="" />
+					<figcaption>
+						you should have something like this now, place a rail piece one down and right (shown
+						red) and connect your straight line to here.
+					</figcaption>
+				</figure>
+				<li>
+					add the other curve remove the scaffold rails and copy the curves to the rest of the
+					hexagon
+				</li>
+				<li>
+					blueprint your hexagon add in the grid sizes and offset and off you go with perfectly
+					tiling bestagons
+				</li>
+			</ol>
+		</details>
+		<hr />
 	</div>
 	<div class="row">
-		<div class="col-3">
-			<label for="rail_grid_x">Width of Upper edge of Hexagon</label>
+		<div class="col">
+			<label for="rail_grid_x">Length of straight rail tiles in Hexagon</label>
 		</div>
 		<div class="col-1" onfocusout={updateUrl}>
 			<input type="number" bind:value={inputs.railGridX} id="rail_grid_x" />
 		</div>
-		<div class="col-3">
+		<div class="col">
 			<label for="rail_grid_y_start">Vertical Length Start</label>
 		</div>
 		<div class="col-1" onfocusout={updateUrl}>
@@ -172,18 +172,27 @@
 		</div>
 	</div>
 	<div class="row">
-		<div class="col-3">
-			<label for="rail_offset">Space inbetween Rails</label>
+		<div class="col">
+			<label for="rail_offset">Offset between rails in rail tiles</label>
 		</div>
 		<div class="col-1" onfocusout={updateUrl}>
 			<input type="number" bind:value={inputs.railOffset} id="rail_offset" />
 		</div>
-		<div class="col-3">
+		<div class="col">
 			<label for="rail_grid_y_end">Vertical Length End</label>
 		</div>
 		<div class="col-1" onfocusout={updateUrl}>
 			<input type="number" bind:value={inputs.railGridYEnd} id="rail_grid_y_end" />
 		</div>
+	</div>
+	<div class="is-center">
+		<p class="text-dark">
+			Make sure to use an uneven amount of straight rails, and an even amount for the Vertical
+			length and the Offset.
+		</p>
+	</div>
+	<div class="is-center">
+		<p class="text-dark">Uneven Offset should work in theory but the calculations will be off.</p>
 	</div>
 	<div class="row">
 		<div class="col is-center">
