@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { Solution } from '$lib/solution';
+	import { createBP } from '$lib/blueprint';
 
 	export const prerender = true;
 	class Inputs {
 		#railGridX: number = $state(0);
-		#railGridYStart: number = $state(0);
-		#railGridYEnd: number = $state(0);
+		#railGridY: number = $state(0);
 		#railOffset: number = $state(0);
 
 		constructor() {
 			this.#railGridX = Number.parseInt(page.url.searchParams.get('railGridX') ?? '0');
-			this.#railGridYStart = Number.parseInt(page.url.searchParams.get('railGridYStart') ?? '0');
-			this.#railGridYEnd = Number.parseInt(page.url.searchParams.get('railGridYEnd') ?? '0');
+			this.#railGridY = Number.parseInt(page.url.searchParams.get('railGridY') ?? '0');
 			this.#railOffset = Number.parseInt(page.url.searchParams.get('railOffset') ?? '0');
 		}
 
@@ -20,12 +20,8 @@
 			return this.#railGridX;
 		}
 
-		public get railGridYStart(): number {
-			return this.#railGridYStart;
-		}
-
-		public get railGridYEnd(): number {
-			return this.#railGridYEnd;
+		public get railGridY(): number {
+			return this.#railGridY;
 		}
 
 		public get railOffset(): number {
@@ -37,14 +33,9 @@
 			page.url.searchParams.set('railGridX', value.toString());
 		}
 
-		public set railGridYStart(value) {
-			this.#railGridYStart = value;
-			page.url.searchParams.set('railGridYStart', value.toString());
-		}
-
-		public set railGridYEnd(value) {
-			this.#railGridYEnd = value;
-			page.url.searchParams.set('railGridYEnd', value.toString());
+		public set railGridY(value) {
+			this.#railGridY = value;
+			page.url.searchParams.set('railGridY', value.toString());
 		}
 
 		public set railOffset(value) {
@@ -53,77 +44,18 @@
 		}
 	}
 
-	class Solution {
-		railGridY: number = 0;
-		planSizeY: number = 0;
-		gridSizeY: number = 0;
-		gridOffsetY: number = 0;
-		railGridX: number = 0;
-		planSizeX: number = 0;
-		gridSizeX: number = 0;
-		gridOffsetX: number = 0;
-		active: boolean = $state(false);
 
-		constructor(
-			railGridY: number,
-			planSizeY: number,
-			gridSizeY: number,
-			gridOffsetY: number,
-			railGridX: number,
-			planSizeX: number,
-			gridSizeX: number,
-			gridOffsetX: number
-		) {
-			this.railGridY = railGridY;
-			this.planSizeY = planSizeY;
-			this.gridSizeY = gridSizeY;
-			this.gridOffsetY = gridOffsetY;
-			this.railGridX = railGridX;
-			this.planSizeX = planSizeX;
-			this.gridSizeX = gridSizeX;
-			this.gridOffsetX = gridOffsetX;
-		}
-	}
 	let inputs: Inputs = new Inputs();
-	let solutions: Solution[] = $state([]);
+	let solution: Solution = $state(new Solution(0,0,0));
+	let blueprint: string = $state("");
 
 	const updateUrl = () => {
 		goto(page.url.search);
 	};
 
-	const activate = (index: any) => {
-		solutions[index].active = !solutions[index].active;
-		console.log(index, solutions[index].active);
-	};
-
 	const calculate = () => {
-		solutions = [];
-
-		let offsetX = inputs.railOffset + 10;
-		for (let railGridY = inputs.railGridYStart; railGridY < inputs.railGridYEnd; railGridY += 2) {
-			let gridSizeX = inputs.railGridX * 2 + railGridY + offsetX;
-			let gridSizeY = railGridY + inputs.railOffset;
-			let planSizeY = railGridY * 2 + (inputs.railOffset * 2 + 2) * 2;
-			let planSizeX = inputs.railGridX * 2 + railGridY * 2 + (inputs.railOffset * 2 + 2) * 2;
-			let gridOffsetX = (planSizeX - gridSizeX) / 2;
-			let gridOffsetY = (planSizeY - gridSizeY) / 2;
-			gridOffsetX = gridOffsetX - (gridOffsetX % 2);
-			gridOffsetY = gridOffsetY - (gridOffsetY % 2);
-
-			solutions.push(
-				new Solution(
-					railGridY,
-					planSizeY,
-					gridSizeY,
-					gridOffsetY,
-					inputs.railGridX,
-					planSizeX,
-					gridSizeX,
-					gridOffsetX
-				)
-			);
-		}
-		console.log('done');
+		solution = new Solution(inputs.railGridX, inputs.railGridY,inputs.railOffset);
+		blueprint = createBP(inputs.railGridX,inputs.railGridY, inputs.railOffset);
 	};
 </script>
 
@@ -165,24 +97,18 @@
 			<input type="number" bind:value={inputs.railGridX} id="rail_grid_x" />
 		</div>
 		<div class="col">
-			<label for="rail_grid_y_start">Vertical Length Start</label>
+			<label for="rail_grid_y">Vertical Length</label>
 		</div>
 		<div class="col-1" onfocusout={updateUrl}>
-			<input type="number" bind:value={inputs.railGridYStart} id="rail_grid_y_start" />
+			<input type="number" bind:value={inputs.railGridY} id="rail_grid_y" />
 		</div>
 	</div>
 	<div class="row">
-		<div class="col">
+		<div class="col-5">
 			<label for="rail_offset">Offset between rails in rail tiles</label>
 		</div>
 		<div class="col-1" onfocusout={updateUrl}>
 			<input type="number" bind:value={inputs.railOffset} id="rail_offset" />
-		</div>
-		<div class="col">
-			<label for="rail_grid_y_end">Vertical Length End</label>
-		</div>
-		<div class="col-1" onfocusout={updateUrl}>
-			<input type="number" bind:value={inputs.railGridYEnd} id="rail_grid_y_end" />
 		</div>
 	</div>
 	<div class="is-center">
@@ -200,7 +126,7 @@
 		</div>
 	</div>
 
-	{#if solutions.length > 0}
+	{#if solution !== undefined && solution.railGridX !== 0}
 		<table class="striped">
 			<thead>
 				<tr>
@@ -215,8 +141,8 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each solutions as solution, index}
-					<tr class={solution.active ? 'active' : 'inactive'} onclick={() => activate(index)}>
+
+					<tr>
 						<td>{solution.railGridX}</td>
 						<td>{solution.railGridY} &lpar;{solution.railGridY / 2}&rpar;</td>
 						<td>{solution.planSizeX}</td>
@@ -226,26 +152,11 @@
 						<td>{solution.gridOffsetX}</td>
 						<td>{solution.gridOffsetY}</td>
 					</tr>
-				{/each}
+
 			</tbody>
 		</table>
+		<h2>Blueprint</h2>
+		<pre>{blueprint}</pre>
 	{/if}
 </div>
 
-<style>
-	/* table {
-		border-collapse: separate;
-		border-spacing: 0;
-	} */
-
-	th {
-		/* header cell */
-		position: sticky;
-		top: 0;
-		background-color: #000000;
-	}
-
-	.active {
-		border: 2px solid #ffffff;
-	}
-</style>
