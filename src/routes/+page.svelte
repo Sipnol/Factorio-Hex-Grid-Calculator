@@ -2,18 +2,25 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Solution } from '$lib/solution';
-	import { createBP } from '$lib/blueprint';
+	import { HexagonGrid } from '$lib/blueprint';
+	import { globals } from './state.svelte';
 
-	export const prerender = true;
 	class Inputs {
+
 		#railGridX: number = $state(0);
 		#railGridY: number = $state(0);
 		#railOffset: number = $state(0);
+		#includePowerPoles: boolean = $state(false);
 
 		constructor() {
 			this.#railGridX = Number.parseInt(page.url.searchParams.get('railGridX') ?? '0');
 			this.#railGridY = Number.parseInt(page.url.searchParams.get('railGridY') ?? '0');
 			this.#railOffset = Number.parseInt(page.url.searchParams.get('railOffset') ?? '0');
+			this.#includePowerPoles = page.url.searchParams.get('includePowerPoles')?.toLowerCase() === 'true' ?? false;
+		}
+
+		public allValid (): boolean {
+			return this.#railGridX > 0 && this.#railGridY > 0 && this.#railOffset > 0;
 		}
 
 		public get railGridX(): number {
@@ -26,6 +33,10 @@
 
 		public get railOffset(): number {
 			return this.#railOffset;
+		}
+
+		get includePowerPoles(): boolean {
+			return this.#includePowerPoles;
 		}
 
 		public set railGridX(value) {
@@ -42,6 +53,13 @@
 			this.#railOffset = value;
 			page.url.searchParams.set('railOffset', value.toString());
 		}
+
+		set includePowerPoles(value: boolean) {
+			this.#includePowerPoles = value;
+			page.url.searchParams.set('includePowerPoles', value.toString());
+			updateUrl()
+			calculate()
+		}
 	}
 
 
@@ -49,14 +67,34 @@
 	let solution: Solution = $state(new Solution(0,0,0));
 	let blueprint: string = $state("");
 
+
+
 	const updateUrl = () => {
 		goto(page.url.search);
+		calculate()
 	};
 
 	const calculate = () => {
+		if(!inputs.allValid()) {
+			return;
+		}
 		solution = new Solution(inputs.railGridX, inputs.railGridY,inputs.railOffset);
-		blueprint = createBP(inputs.railGridX,inputs.railGridY, inputs.railOffset);
+		let grid = new HexagonGrid(inputs.railGridX, inputs.railGridY,inputs.railOffset);
+		grid.createHexGrid();
+		if(inputs.includePowerPoles) {
+			grid.createPowerPoles()
+		}
+		grid.prepareExportBlueprint();
+		blueprint = grid.bp.encode();
 	};
+
+	const copyToClipboard = () => {
+		calculate()
+		navigator.clipboard.writeText(blueprint);
+	}
+
+
+	calculate()
 </script>
 
 <div class="container">
@@ -120,11 +158,6 @@
 	<div class="is-center">
 		<p class="text-dark">Uneven Offset should work in theory but the calculations will be off.</p>
 	</div>
-	<div class="row">
-		<div class="col is-center">
-			<button type="button" class="button primary" onclick={calculate}>Calculate</button>
-		</div>
-	</div>
 
 	{#if solution !== undefined && solution.railGridX !== 0}
 		<table class="striped">
@@ -155,7 +188,18 @@
 
 			</tbody>
 		</table>
-		<h2>Blueprint</h2>
+		<div class="row">
+			<div class="col">
+				<h2>Blueprint</h2>
+			</div>
+			<div class="col-1 is-center">
+				<button class="button outline dark" onclick={copyToClipboard}><img src="https://icongr.am/fontawesome/copy.svg?size=16&color={globals.dayMode ? '000000' : 'ffffff'}" alt="copyButton"></button>
+			</div>
+			<div class="col-2 is-center">
+				<label for="power_pole_check"><input id="power_pole_check" type="checkbox" bind:checked={inputs.includePowerPoles}>Include Power Poles</label>
+			</div>
+
+		</div>
 		<pre>{blueprint}</pre>
 	{/if}
 </div>

@@ -1,24 +1,46 @@
-<script>
+<script lang="ts">
 	import 'chota/dist/chota.min.css';
+	import Blueprint from 'factorio-blueprint';
+	import { globals } from './state.svelte.js';
+	import type { LayoutProps } from '../../.svelte-kit/types/src/routes/$types';
+
+	let { data, children }: LayoutProps = $props();
+	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 
-	let daymode = $state(true);
-
-	if (browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-		document.body.classList.add('dark');
-		daymode = false;
-	}
 
 	const changeMode = () => {
-		daymode = !daymode;
-		if (daymode) {
+		globals.dayMode = !globals.dayMode;
+		setBody();
+	};
+
+	const setBody = () => {
+		if (globals.dayMode) {
 			document.body.classList.remove('dark');
 		} else {
 			document.body.classList.add('dark');
 		}
 	};
 
-	let { children } = $props();
+	Blueprint.setEntityData({
+		curved_rail_a: {
+			type: 'item',
+			width: 3,
+			height: 5
+		},
+		curved_rail_b: {
+			type: 'item',
+			width: 5,
+			height: 6
+		}
+	});
+	onMount(() => {
+		if (browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+			globals.dayMode = false;
+		}
+		setBody();
+
+	});
 </script>
 
 <nav class="nav">
@@ -31,9 +53,9 @@
 	</div>
 	<div class="nav-right">
 		<a href="https://github.com/Sipnol/Factorio-Hex-Grid-Calculator">
-			{#if daymode}
+			{#if globals.dayMode}
 				<img
-          src="https://icongr.am/simple/github.svg?size=128&color=000000&colored=false"
+					src="https://icongr.am/simple/github.svg?size=128&color=000000&colored=false"
 					alt="Github"
 				/>
 			{:else}
@@ -44,10 +66,10 @@
 			{/if}
 		</a>
 		<a
-			href="javascript:"
+			href=javascript:
 			onclick={() => {
 				changeMode();
-			}}>{daymode ? '☀️' : '🌙'}</a
+			}}>{globals.dayMode ? '☀️' : '🌙'}</a
 		>
 	</div>
 </nav>
